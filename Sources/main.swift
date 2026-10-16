@@ -3,11 +3,13 @@ import Carbon.HIToolbox
 
 private let floatingLayer = Int(CGWindowLevelForKey(.floatingWindow))
 private let edgeMargin: CGFloat = 10
+// Safari, Apple TV, FaceTime and other apps using Apple's built-in Picture-in-Picture
+// draw it from this system process rather than from the app itself.
+private let systemPiPOwner = "PIPAgent"
 
 final class Shield: NSPanel {
     init() {
         super.init(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        level = NSWindow.Level(rawValue: floatingLayer + 1)
         collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
         isOpaque = false
         backgroundColor = .clear
@@ -63,19 +65,22 @@ final class App: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func pipWindows() -> [CGWindowID: CGRect] {
+    // Firefox, Chrome, Edge, Teams and most other apps put their pop-out video on the
+    // always-on-top layer, so any reasonably sized window there counts, whichever app owns it.
+    private func pipWindows() -> [CGWindowID: (bounds: CGRect, layer: Int)] {
         guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { return [:] }
-        var found: [CGWindowID: CGRect] = [:]
+        let ownPID = ProcessInfo.processInfo.processIdentifier
+        var found: [CGWindowID: (bounds: CGRect, layer: Int)] = [:]
         for w in list {
-            guard (w[kCGWindowLayer as String] as? Int) == floatingLayer,
-                  let pid = w[kCGWindowOwnerPID as String] as? pid_t,
-                  let bundle = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier,
-                  bundle.hasPrefix("org.mozilla."),
+            guard let layer = w[kCGWindowLayer as String] as? Int,
+                  let pid = w[kCGWindowOwnerPID as String] as? pid_t, pid != ownPID,
+                  layer == floatingLayer || (w[kCGWindowOwnerName as String] as? String) == systemPiPOwner,
+                  (w[kCGWindowAlpha as String] as? Double ?? 1) > 0,
                   let id = w[kCGWindowNumber as String] as? CGWindowID,
                   let boundsDict = w[kCGWindowBounds as String] as? NSDictionary,
                   let bounds = CGRect(dictionaryRepresentation: boundsDict),
                   bounds.width >= 80, bounds.height >= 45 else { continue }
-            found[id] = bounds
+            found[id] = (bounds, layer)
         }
         return found
     }
@@ -87,13 +92,15 @@ final class App: NSObject, NSApplicationDelegate {
             shields[id] = nil
         }
         guard let primaryHeight = NSScreen.screens.first?.frame.height else { return }
-        for (id, r) in windows {
+        for (id, (r, layer)) in windows {
             // CoreGraphics measures from the top-left, AppKit from the bottom-left of the main screen.
             // The margin also blocks the resize zone just outside the window's edge.
             let frame = NSRect(x: r.minX, y: primaryHeight - r.maxY, width: r.width, height: r.height)
                 .insetBy(dx: -edgeMargin, dy: -edgeMargin)
             let shield = shields[id] ?? Shield()
             shields[id] = shield
+            let level = NSWindow.Level(rawValue: layer + 1)
+            if shield.level != level { shield.level = level }
             if shield.frame != frame { shield.setFrame(frame, display: false) }
             if !shield.isVisible { shield.orderFrontRegardless() }
         }

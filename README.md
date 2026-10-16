@@ -2,9 +2,9 @@
 
 # PiP Lock
 
-A small macOS menu bar app that locks Firefox's Picture-in-Picture window. Once it's locked, you can't drag it, resize it or click it by accident, and the video keeps playing.
+A small macOS menu bar app that locks Picture-in-Picture windows from any app: Firefox, Chrome, Edge, Safari, Teams and so on. Once it's locked, you can't drag it, resize it or click it by accident, and the video keeps playing.
 
-It works by laying an invisible window over the pop-up. There's no installer, it needs no permissions.
+It works by laying an invisible window over every always-on-top window, so it also locks other apps' floating windows while it's on. There's no installer, it needs no permissions.
 
 ## Install
 
@@ -18,4 +18,4 @@ Click the lock in the menu bar, or press **⌃ ⌥ L** from any app. Do the same
 
 You need Apple's command line tools (`xcode-select --install`). Then run `./scripts/build.sh`, and the app ends up in `build/`.
 
-MIT license. Not affiliated with Mozilla.
+MIT license. Not affiliated with Mozilla, Google, Microsoft or Apple.
