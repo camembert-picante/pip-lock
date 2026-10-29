@@ -2,6 +2,10 @@ import AppKit
 import Carbon.HIToolbox
 
 private let floatingLayer = Int(CGWindowLevelForKey(.floatingWindow))
+// Teams puts its call pop-out at the menu bar's level, so the range runs up to there.
+private let topmostAppLayer = Int(CGWindowLevelForKey(.mainMenuWindow))
+// App alert dialogs live here; covering one would leave you stuck behind it.
+private let modalPanelLayer = Int(CGWindowLevelForKey(.modalPanelWindow))
 private let edgeMargin: CGFloat = 10
 // Safari, Apple TV, FaceTime and other apps using Apple's built-in Picture-in-Picture
 // draw it from this system process rather than from the app itself.
@@ -74,7 +78,7 @@ final class App: NSObject, NSApplicationDelegate {
         for w in list {
             guard let layer = w[kCGWindowLayer as String] as? Int,
                   let pid = w[kCGWindowOwnerPID as String] as? pid_t, pid != ownPID,
-                  layer == floatingLayer || (w[kCGWindowOwnerName as String] as? String) == systemPiPOwner,
+                  isPictureInPicture(layer: layer, pid: pid, owner: w[kCGWindowOwnerName as String] as? String),
                   (w[kCGWindowAlpha as String] as? Double ?? 1) > 0,
                   let id = w[kCGWindowNumber as String] as? CGWindowID,
                   let boundsDict = w[kCGWindowBounds as String] as? NSDictionary,
@@ -83,6 +87,13 @@ final class App: NSObject, NSApplicationDelegate {
             found[id] = (bounds, layer)
         }
         return found
+    }
+
+    // Only regular apps count, which keeps the menu bar, Dock and other system UI on the same layers unlocked.
+    private func isPictureInPicture(layer: Int, pid: pid_t, owner: String?) -> Bool {
+        if owner == systemPiPOwner { return true }
+        guard (floatingLayer...topmostAppLayer).contains(layer), layer != modalPanelLayer else { return false }
+        return NSRunningApplication(processIdentifier: pid)?.activationPolicy == .regular
     }
 
     private func sync() {
