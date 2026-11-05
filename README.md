@@ -1,4 +1,4 @@
-<p align="center"><img src="Resources/AppIcon.png" width="128" alt="PiP Lock icon"></p>
+<p align="center"><img src="Resources/Icon.png" width="128" alt="PiP Lock icon"></p>
 
 # PiP Lock
 
