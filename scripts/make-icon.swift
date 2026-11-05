@@ -62,36 +62,33 @@ ctx.drawRadialGradient(CGGradient(colorsSpace: srgb, colors: [rgb(0xFFFFFF, 0.22
                        endCenter: CGPoint(x: 280, y: 240), endRadius: 480, options: [])
 ctx.restoreGState()
 
-// An eclipse: a dark purple moon with an orange glow spilling out around its edge.
-let moon = CGPoint(x: 512, y: 520), moonRadius: CGFloat = 330
-let moonRect = CGRect(x: moon.x - moonRadius, y: moon.y - moonRadius, width: moonRadius * 2, height: moonRadius * 2)
-ctx.drawRadialGradient(CGGradient(colorsSpace: srgb,
-                                  colors: [rgb(0xFF8A30, 0.9), rgb(0xFF8A30, 0.9), rgb(0xF0404F, 0.45), rgb(0xF0404F, 0)] as CFArray,
-                                  locations: [0, 0.6, 0.8, 1])!,
-                       startCenter: moon, startRadius: 0, endCenter: moon, endRadius: moonRadius + 80, options: [])
-
-let shade = CGPoint(x: moonRect.minX + moonRect.width * 0.4, y: moonRect.minY + moonRect.height * 0.35)
+// Fox head: ears on top, cheeks tapering to a chin.
+let head = polygon([(170, 590), (228, 392), (268, 190), (430, 340), (594, 340),
+                    (756, 190), (796, 392), (854, 590), (512, 842)])
 ctx.saveGState()
-ctx.addEllipse(in: moonRect)
-ctx.clip()
-ctx.drawRadialGradient(gradient([0x4B1A9E, 0x2A0B5A, 0x180838], [0, 0.7, 1]),
-                       startCenter: shade, startRadius: 0, endCenter: shade, endRadius: moonRect.width * 0.8,
-                       options: [.drawsAfterEndLocation])
+ctx.setShadow(offset: CGSize(width: 0, height: 16), blur: 34, color: rgb(0x1A0638, 0.55))
+softFill(head, rgb(0xFF7A2E), round: 48)
 ctx.restoreGState()
 
-// The lit rim, brightest at the top left and fading out towards the bottom right.
 ctx.saveGState()
-ctx.addPath(CGPath(ellipseIn: moonRect.insetBy(dx: 9, dy: 9), transform: nil)
-    .copy(strokingWithWidth: 18, lineCap: .butt, lineJoin: .round, miterLimit: 10))
+ctx.addPath(head.union(head.copy(strokingWithWidth: 48, lineCap: .round, lineJoin: .round, miterLimit: 10)))
 ctx.clip()
-ctx.drawLinearGradient(CGGradient(colorsSpace: srgb,
-                                  colors: [rgb(0xFFC53A), rgb(0xFF7A2E), rgb(0xE8356D, 0.2)] as CFArray,
-                                  locations: [0, 0.5, 1])!,
-                       start: CGPoint(x: moonRect.minX, y: moonRect.minY),
-                       end: CGPoint(x: moonRect.maxX, y: moonRect.maxY), options: [])
+ctx.drawLinearGradient(gradient([0xFFC53A, 0xFF7A2E, 0xF0404F], [0, 0.5, 1]),
+                       start: CGPoint(x: 512, y: 170), end: CGPoint(x: 512, y: 860), options: [])
 ctx.restoreGState()
 
-// The video player sits in front of the eclipse.
+// Inner ears.
+softFill(polygon([(274, 252), (258, 372), (384, 336)]), rgb(0x3B0E62), round: 18)
+softFill(polygon([(750, 252), (766, 372), (640, 336)]), rgb(0x3B0E62), round: 18)
+
+// White cheeks and a dark nose.
+softFill(polygon([(176, 596), (512, 836), (372, 662)]), rgb(0xFFF4EA), round: 36)
+softFill(polygon([(848, 596), (512, 836), (652, 662)]), rgb(0xFFF4EA), round: 36)
+ctx.addEllipse(in: CGRect(x: 478, y: 752, width: 68, height: 46))
+ctx.setFillColor(rgb(0x230A40))
+ctx.fillPath()
+
+// The video player sits where the fox's eyes would be.
 let player = CGRect(x: 292, y: 410, width: 440, height: 290)
 ctx.saveGState()
 ctx.setShadow(offset: CGSize(width: 0, height: 10), blur: 24, color: rgb(0x1A0638, 0.5))
