@@ -62,54 +62,36 @@ ctx.drawRadialGradient(CGGradient(colorsSpace: srgb, colors: [rgb(0xFFFFFF, 0.22
                        endCenter: CGPoint(x: 280, y: 240), endRadius: 480, options: [])
 ctx.restoreGState()
 
-// A ringed planet: the back of the ring, the planet, then the front of the ring over it.
-let planet = CGPoint(x: 512, y: 520), planetRadius: CGFloat = 280
-let ringRadii = CGSize(width: 380, height: 104), ringTilt = -16 * CGFloat.pi / 180, ringWidth: CGFloat = 30
-func ringHalf(front: Bool) -> CGPath {
-    let p = CGMutablePath()
-    let steps = 96
-    for i in 0...steps {
-        let a = (front ? 0 : CGFloat.pi) + CGFloat.pi * CGFloat(i) / CGFloat(steps)
-        let pt = CGPoint(x: ringRadii.width * cos(a), y: ringRadii.height * sin(a))
-        if i == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
-    }
-    var t = CGAffineTransform(translationX: planet.x, y: planet.y).rotated(by: ringTilt)
-    return p.copy(using: &t)!
-}
-func drawRing(front: Bool, alpha: CGFloat) {
-    ctx.saveGState()
-    ctx.setAlpha(alpha)
-    ctx.addPath(ringHalf(front: front).copy(strokingWithWidth: ringWidth, lineCap: .round, lineJoin: .round, miterLimit: 10))
-    ctx.clip()
-    ctx.drawLinearGradient(gradient([0xFFC53A, 0xFF7A2E, 0xE8356D], [0, 0.5, 1]),
-                           start: CGPoint(x: planet.x - ringRadii.width, y: 0),
-                           end: CGPoint(x: planet.x + ringRadii.width, y: 0), options: [])
-    ctx.restoreGState()
-}
+// An eclipse: a dark purple moon with an orange glow spilling out around its edge.
+let moon = CGPoint(x: 512, y: 520), moonRadius: CGFloat = 330
+let moonRect = CGRect(x: moon.x - moonRadius, y: moon.y - moonRadius, width: moonRadius * 2, height: moonRadius * 2)
+ctx.drawRadialGradient(CGGradient(colorsSpace: srgb,
+                                  colors: [rgb(0xFF8A30, 0.9), rgb(0xFF8A30, 0.9), rgb(0xF0404F, 0.45), rgb(0xF0404F, 0)] as CFArray,
+                                  locations: [0, 0.6, 0.8, 1])!,
+                       startCenter: moon, startRadius: 0, endCenter: moon, endRadius: moonRadius + 80, options: [])
 
-drawRing(front: false, alpha: 0.85)
-
-let planetRect = CGRect(x: planet.x - planetRadius, y: planet.y - planetRadius, width: planetRadius * 2, height: planetRadius * 2)
+let shade = CGPoint(x: moonRect.minX + moonRect.width * 0.4, y: moonRect.minY + moonRect.height * 0.35)
 ctx.saveGState()
-ctx.setShadow(offset: CGSize(width: 0, height: 16), blur: 34, color: rgb(0x1A0638, 0.55))
-ctx.addEllipse(in: planetRect)
-ctx.setFillColor(rgb(0xE8356D))
-ctx.fillPath()
-ctx.restoreGState()
-
-// Lit from the top left: warm yellow fading through pink into dark purple at the far edge.
-let light = CGPoint(x: planetRect.minX + planetRect.width * 0.36, y: planetRect.minY + planetRect.height * 0.3)
-ctx.saveGState()
-ctx.addEllipse(in: planetRect)
+ctx.addEllipse(in: moonRect)
 ctx.clip()
-ctx.drawRadialGradient(gradient([0xFFD35A, 0xFF7A2E, 0xE8356D, 0x6A1FB0, 0x3B0E62], [0, 0.3, 0.62, 0.85, 1]),
-                       startCenter: light, startRadius: 0, endCenter: light, endRadius: planetRect.width * 0.85,
+ctx.drawRadialGradient(gradient([0x4B1A9E, 0x2A0B5A, 0x180838], [0, 0.7, 1]),
+                       startCenter: shade, startRadius: 0, endCenter: shade, endRadius: moonRect.width * 0.8,
                        options: [.drawsAfterEndLocation])
 ctx.restoreGState()
 
-drawRing(front: true, alpha: 1)
+// The lit rim, brightest at the top left and fading out towards the bottom right.
+ctx.saveGState()
+ctx.addPath(CGPath(ellipseIn: moonRect.insetBy(dx: 9, dy: 9), transform: nil)
+    .copy(strokingWithWidth: 18, lineCap: .butt, lineJoin: .round, miterLimit: 10))
+ctx.clip()
+ctx.drawLinearGradient(CGGradient(colorsSpace: srgb,
+                                  colors: [rgb(0xFFC53A), rgb(0xFF7A2E), rgb(0xE8356D, 0.2)] as CFArray,
+                                  locations: [0, 0.5, 1])!,
+                       start: CGPoint(x: moonRect.minX, y: moonRect.minY),
+                       end: CGPoint(x: moonRect.maxX, y: moonRect.maxY), options: [])
+ctx.restoreGState()
 
-// The video player sits in front of the planet.
+// The video player sits in front of the eclipse.
 let player = CGRect(x: 292, y: 410, width: 440, height: 290)
 ctx.saveGState()
 ctx.setShadow(offset: CGSize(width: 0, height: 10), blur: 24, color: rgb(0x1A0638, 0.5))
