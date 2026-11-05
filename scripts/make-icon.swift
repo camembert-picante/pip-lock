@@ -62,33 +62,54 @@ ctx.drawRadialGradient(CGGradient(colorsSpace: srgb, colors: [rgb(0xFFFFFF, 0.22
                        endCenter: CGPoint(x: 280, y: 240), endRadius: 480, options: [])
 ctx.restoreGState()
 
-// Fox head: ears on top, cheeks tapering to a chin.
-let head = polygon([(170, 590), (228, 392), (268, 190), (430, 340), (594, 340),
-                    (756, 190), (796, 392), (854, 590), (512, 842)])
+// A ringed planet: the back of the ring, the planet, then the front of the ring over it.
+let planet = CGPoint(x: 512, y: 520), planetRadius: CGFloat = 280
+let ringRadii = CGSize(width: 380, height: 104), ringTilt = -16 * CGFloat.pi / 180, ringWidth: CGFloat = 30
+func ringHalf(front: Bool) -> CGPath {
+    let p = CGMutablePath()
+    let steps = 96
+    for i in 0...steps {
+        let a = (front ? 0 : CGFloat.pi) + CGFloat.pi * CGFloat(i) / CGFloat(steps)
+        let pt = CGPoint(x: ringRadii.width * cos(a), y: ringRadii.height * sin(a))
+        if i == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
+    }
+    var t = CGAffineTransform(translationX: planet.x, y: planet.y).rotated(by: ringTilt)
+    return p.copy(using: &t)!
+}
+func drawRing(front: Bool, alpha: CGFloat) {
+    ctx.saveGState()
+    ctx.setAlpha(alpha)
+    ctx.addPath(ringHalf(front: front).copy(strokingWithWidth: ringWidth, lineCap: .round, lineJoin: .round, miterLimit: 10))
+    ctx.clip()
+    ctx.drawLinearGradient(gradient([0xFFC53A, 0xFF7A2E, 0xE8356D], [0, 0.5, 1]),
+                           start: CGPoint(x: planet.x - ringRadii.width, y: 0),
+                           end: CGPoint(x: planet.x + ringRadii.width, y: 0), options: [])
+    ctx.restoreGState()
+}
+
+drawRing(front: false, alpha: 0.85)
+
+let planetRect = CGRect(x: planet.x - planetRadius, y: planet.y - planetRadius, width: planetRadius * 2, height: planetRadius * 2)
 ctx.saveGState()
 ctx.setShadow(offset: CGSize(width: 0, height: 16), blur: 34, color: rgb(0x1A0638, 0.55))
-softFill(head, rgb(0xFF7A2E), round: 48)
-ctx.restoreGState()
-
-ctx.saveGState()
-ctx.addPath(head.union(head.copy(strokingWithWidth: 48, lineCap: .round, lineJoin: .round, miterLimit: 10)))
-ctx.clip()
-ctx.drawLinearGradient(gradient([0xFFC53A, 0xFF7A2E, 0xF0404F], [0, 0.5, 1]),
-                       start: CGPoint(x: 512, y: 170), end: CGPoint(x: 512, y: 860), options: [])
-ctx.restoreGState()
-
-// Inner ears.
-softFill(polygon([(274, 252), (258, 372), (384, 336)]), rgb(0x3B0E62), round: 18)
-softFill(polygon([(750, 252), (766, 372), (640, 336)]), rgb(0x3B0E62), round: 18)
-
-// White cheeks and a dark nose.
-softFill(polygon([(176, 596), (512, 836), (372, 662)]), rgb(0xFFF4EA), round: 36)
-softFill(polygon([(848, 596), (512, 836), (652, 662)]), rgb(0xFFF4EA), round: 36)
-ctx.addEllipse(in: CGRect(x: 478, y: 752, width: 68, height: 46))
-ctx.setFillColor(rgb(0x230A40))
+ctx.addEllipse(in: planetRect)
+ctx.setFillColor(rgb(0xE8356D))
 ctx.fillPath()
+ctx.restoreGState()
 
-// The video player sits where the fox's eyes would be.
+// Lit from the top left: warm yellow fading through pink into dark purple at the far edge.
+let light = CGPoint(x: planetRect.minX + planetRect.width * 0.36, y: planetRect.minY + planetRect.height * 0.3)
+ctx.saveGState()
+ctx.addEllipse(in: planetRect)
+ctx.clip()
+ctx.drawRadialGradient(gradient([0xFFD35A, 0xFF7A2E, 0xE8356D, 0x6A1FB0, 0x3B0E62], [0, 0.3, 0.62, 0.85, 1]),
+                       startCenter: light, startRadius: 0, endCenter: light, endRadius: planetRect.width * 0.85,
+                       options: [.drawsAfterEndLocation])
+ctx.restoreGState()
+
+drawRing(front: true, alpha: 1)
+
+// The video player sits in front of the planet.
 let player = CGRect(x: 292, y: 410, width: 440, height: 290)
 ctx.saveGState()
 ctx.setShadow(offset: CGSize(width: 0, height: 10), blur: 24, color: rgb(0x1A0638, 0.5))

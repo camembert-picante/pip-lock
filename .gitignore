@@ -1,2 +1,14 @@
+# Build output
 build/
+.build/
+
+# Xcode and Swift Package Manager
+.swiftpm/
+xcuserdata/
+*.xcuserstate
+
+# macOS and editors
 .DS_Store
+*.swp
+.vscode/
+.idea/
